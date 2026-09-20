@@ -1,0 +1,30 @@
+{
+  "name": "betoch-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Betoch — High-Performance Home Rental Marketplace for Ethiopia and Emerging Markets",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"api,web\" -c \"cyan,green\" \"npm run dev -w @betoch/api\" \"npm run dev -w @betoch/web\"",
+    "dev:api": "npm run dev -w @betoch/api",
+    "dev:web": "npm run dev -w @betoch/web",
+    "build": "npm run build -w @betoch/shared && npm run build -w @betoch/validation && npm run build -w @betoch/config && npm run build -w @betoch/api && npm run build -w @betoch/web",
+    "test": "tsx --test tests/commission.test.ts tests/telebirr.test.ts tests/validation.test.ts",
+    "db:migrate": "node database/migrate.js",
+    "db:seed": "node database/seed.js",
+    "lint": "npm run lint -w @betoch/api && npm run lint -w @betoch/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.3",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "argon2": "^0.45.1"
+  }
+}

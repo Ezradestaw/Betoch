@@ -1,0 +1,55 @@
+name: Betoch CI / CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: betoch_admin
+          POSTGRES_PASSWORD: betoch_ci_password
+          POSTGRES_DB: betoch_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Run Schema Migrations
+        env:
+          DATABASE_URL: postgresql://betoch_admin:betoch_ci_password@localhost:5432/betoch_dev
+        run: node database/migrate.js
+
+      - name: Run Seed Data Script
+        env:
+          DATABASE_URL: postgresql://betoch_admin:betoch_ci_password@localhost:5432/betoch_dev
+        run: node database/seed.js
+
+      - name: Run Automated Test Suite
+        run: npm test
+
+      - name: Type Check & Production Build
+        run: npm run build
