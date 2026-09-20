@@ -134,7 +134,7 @@ export async function searchProperties(request: FastifyRequest, reply: FastifyRe
     SELECT 
       p.id, p.title, p.slug, p.description, p.property_type, p.bedrooms, p.bathrooms,
       p.floor, p.total_floors, p.size_sqm, p.furnished, p.country, p.city, p.sub_city,
-      p.woreda, p.neighborhood, p.monthly_rent, p.deposit_amount, p.currency,
+      p.woreda, p.neighborhood, p.monthly_rent, p.deposit_amount, p.currency, p.previous_monthly_rent,
       p.verification_status, p.listing_status, p.created_at,
       (
         SELECT json_build_object('url', pi.image_url, 'isPrimary', pi.is_primary)
@@ -186,6 +186,7 @@ export async function searchProperties(request: FastifyRequest, reply: FastifyRe
         pricing: {
           monthlyRent: Number(row.monthly_rent),
           depositAmount: Number(row.deposit_amount),
+          previousMonthlyRent: row.previous_monthly_rent ? Number(row.previous_monthly_rent) : null,
           currency: row.currency
         },
         verificationStatus: row.verification_status,
@@ -279,6 +280,7 @@ export async function getPropertyDetails(request: FastifyRequest, reply: Fastify
       pricing: {
         monthlyRent: Number(p.monthly_rent),
         depositAmount: Number(p.deposit_amount),
+        previousMonthlyRent: p.previous_monthly_rent ? Number(p.previous_monthly_rent) : null,
         currency: p.currency,
         leaseDurationMonths: p.lease_duration_months,
         utilitiesIncluded: p.utilities_included
@@ -454,3 +456,153 @@ export async function getMyListings(request: FastifyRequest, reply: FastifyReply
     }))
   });
 }
+
+export async function updatePropertyPrice(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const userId = request.user!.id;
+  const { id } = request.params as { id: string };
+  const { monthlyRent, depositAmount } = request.body as { monthlyRent: number; depositAmount: number };
+
+  if (!monthlyRent || monthlyRent <= 0) {
+    return reply.status(400).send({ success: false, message: 'Valid monthly rent is required.' });
+  }
+
+  const propRes = await query(
+    `SELECT id, owner_id, title, slug, monthly_rent FROM properties WHERE id = $1 AND deleted_at IS NULL`,
+    [id]
+  );
+  if (propRes.rows.length === 0) {
+    return reply.status(404).send({ success: false, message: 'Property not found.' });
+  }
+
+  const property = propRes.rows[0];
+  if (property.owner_id !== userId && request.user!.role !== 'ADMIN') {
+    return reply.status(403).send({ success: false, message: 'Unauthorized to modify this property.' });
+  }
+
+  const oldPrice = Number(property.monthly_rent);
+  const isPriceDrop = monthlyRent < oldPrice;
+
+  await query(
+    `UPDATE properties 
+     SET monthly_rent = $1, 
+         deposit_amount = $2, 
+         previous_monthly_rent = CASE WHEN $3 = true THEN $4 ELSE previous_monthly_rent END,
+         updated_at = NOW()
+     WHERE id = $5`,
+    [monthlyRent, depositAmount, isPriceDrop, oldPrice, id]
+  );
+
+  // Send notifications to all users who saved this property
+  if (isPriceDrop) {
+    const favsRes = await query(`SELECT user_id FROM favorites WHERE property_id = $1`, [id]);
+    for (const f of favsRes.rows) {
+      await query(
+        `INSERT INTO notifications (user_id, title, message, type, link_url)
+         VALUES ($1, $2, $3, 'PRICE_DROP', $4)`,
+        [
+          f.user_id,
+          'Price Reduced!',
+          `Great news! "${property.title}" was reduced from ${oldPrice.toLocaleString()} ETB to ${monthlyRent.toLocaleString()} ETB.`,
+          `/properties/${property.slug}`
+        ]
+      );
+    }
+  }
+
+  return reply.send({
+    success: true,
+    message: isPriceDrop
+      ? 'Price reduced successfully. Favorited tenants have been notified!'
+      : 'Price updated successfully.',
+    data: { id, monthlyRent, previousMonthlyRent: isPriceDrop ? oldPrice : null }
+  });
+}
+
+export async function getOwnerPublicProfile(request: FastifyRequest, reply: FastifyReply) {
+  const { ownerId } = request.params as { ownerId: string };
+
+  const ownerRes = await query(
+    `SELECT u.id, u.created_at AS member_since,
+            up.first_name, up.last_name, up.avatar_url, up.bio, up.identity_status
+     FROM users u
+     JOIN user_profiles up ON up.user_id = u.id
+     WHERE u.id = $1`,
+    [ownerId]
+  );
+
+  if (ownerRes.rows.length === 0) {
+    return reply.status(404).send({ success: false, message: 'Owner not found.' });
+  }
+
+  const o = ownerRes.rows[0];
+
+  const propsRes = await query(
+    `SELECT p.id, p.title, p.slug, p.property_type, p.bedrooms, p.bathrooms,
+            p.monthly_rent, p.currency, p.sub_city, p.neighborhood, p.size_sqm,
+            p.verification_status, p.listing_status, p.previous_monthly_rent,
+            (
+              SELECT json_build_object('id', pi.id, 'url', pi.image_url)
+              FROM property_images pi
+              WHERE pi.property_id = p.id AND pi.is_primary = true
+              LIMIT 1
+            ) AS primary_image
+     FROM properties p
+     WHERE p.owner_id = $1 AND p.deleted_at IS NULL AND p.listing_status = 'AVAILABLE'
+     ORDER BY p.created_at DESC`,
+    [ownerId]
+  );
+
+  const statsRes = await query(
+    `SELECT 
+      COUNT(DISTINCT p.id) AS total_properties,
+      COUNT(DISTINCT CASE WHEN p.listing_status = 'RENTED' THEN p.id END) AS rented_properties
+     FROM properties p
+     WHERE p.owner_id = $1 AND p.deleted_at IS NULL`,
+    [ownerId]
+  );
+
+  return reply.send({
+    success: true,
+    data: {
+      owner: {
+        id: o.id,
+        name: `${o.first_name} ${o.last_name ? o.last_name[0] + '.' : ''}`,
+        avatarUrl: o.avatar_url,
+        bio: o.bio || 'Verified property owner on Betoch Addis Ababa.',
+        identityStatus: o.identity_status,
+        memberSince: o.member_since,
+        responseRate: '98%',
+        responseTime: 'Usually responds within 2 hours',
+        totalProperties: parseInt(statsRes.rows[0]?.total_properties || '0', 10),
+        rentedProperties: parseInt(statsRes.rows[0]?.rented_properties || '0', 10)
+      },
+      properties: propsRes.rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        propertyType: row.property_type,
+        bedrooms: row.bedrooms,
+        bathrooms: row.bathrooms,
+        sizeSqm: row.size_sqm,
+        pricing: {
+          monthlyRent: Number(row.monthly_rent),
+          depositAmount: Number(row.monthly_rent) * 2,
+          currency: row.currency,
+          previousMonthlyRent: row.previous_monthly_rent ? Number(row.previous_monthly_rent) : undefined
+        },
+        location: {
+          city: 'Addis Ababa',
+          subCity: row.sub_city,
+          neighborhood: row.neighborhood
+        },
+        primaryImage: row.primary_image?.url || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80',
+        verificationStatus: row.verification_status,
+        listingStatus: row.listing_status
+      }))
+    }
+  });
+}
+

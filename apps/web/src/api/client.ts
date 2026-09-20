@@ -65,7 +65,11 @@ export const api = {
 
   // Favorites
   getFavorites: () => request<any[]>('/favorites'),
-  addFavorite: (propertyId: string) => request<any>(`/favorites/${propertyId}`, { method: 'POST' }),
+  addFavorite: (propertyId: string, collectionName?: string) =>
+    request<any>(`/favorites/${propertyId}`, {
+      method: 'POST',
+      body: collectionName ? JSON.stringify({ collectionName }) : undefined
+    }),
   removeFavorite: (propertyId: string) => request<any>(`/favorites/${propertyId}`, { method: 'DELETE' }),
 
   // Applications
@@ -175,5 +179,36 @@ export const api = {
   getAdminAIMetrics: () => request<any>('/ai/admin/metrics'),
   getAdminFeatureFlags: () => request<any[]>('/ai/admin/feature-flags'),
   toggleFeatureFlag: (featureKey: string, isEnabled: boolean) =>
-    request<any>('/ai/admin/feature-flags/toggle', { method: 'POST', body: JSON.stringify({ featureKey, isEnabled }) })
+    request<any>('/ai/admin/feature-flags/toggle', { method: 'POST', body: JSON.stringify({ featureKey, isEnabled }) }),
+
+  // Notifications
+  getNotifications: (params?: { limit?: number; unreadOnly?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.unreadOnly) q.append('unreadOnly', 'true');
+    return request<{ notifications: any[]; unreadCount: number }>(`/notifications?${q.toString()}`);
+  },
+  markNotificationAsRead: (id: string) => request<any>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllNotificationsAsRead: () => request<any>('/notifications/mark-all-read', { method: 'POST' }),
+  deleteNotification: (id: string) => request<any>(`/notifications/${id}`, { method: 'DELETE' }),
+
+  // Saved Searches
+  getSavedSearches: () => request<any[]>('/saved-searches'),
+  createSavedSearch: (body: { name: string; filters: any; notifyEmail?: boolean; notifyInApp?: boolean }) =>
+    request<any>('/saved-searches', { method: 'POST', body: JSON.stringify(body) }),
+  deleteSavedSearch: (id: string) => request<any>(`/saved-searches/${id}`, { method: 'DELETE' }),
+
+  // Viewing Appointments
+  getMyViewingRequests: () => request<any[]>('/viewings/my-requests'),
+  getOwnerViewingRequests: () => request<any[]>('/viewings/owner-requests'),
+  updateViewingStatus: (id: string, status: string, rejectionReason?: string) =>
+    request<any>(`/viewings/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, rejectionReason }) }),
+
+  // Property Price Update
+  updatePropertyPrice: (id: string, monthlyRent: number, depositAmount: number) =>
+    request<any>(`/properties/${id}/price`, { method: 'PATCH', body: JSON.stringify({ monthlyRent, depositAmount }) }),
+
+  // Owner Public Profile
+  getOwnerProfile: (ownerId: string) => request<{ owner: any; properties: any[] }>(`/properties/owner/${ownerId}/profile`)
 };
+

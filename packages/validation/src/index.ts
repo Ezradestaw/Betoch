@@ -354,3 +354,27 @@ export const toggleFeatureFlagSchema = z.object({
 
 export type ToggleFeatureFlagInput = z.infer<typeof toggleFeatureFlagSchema>;
 
+export const createSavedSearchSchema = z.object({
+  name: z.string().min(1).max(128),
+  filters: z.record(z.any()),
+  notifyEmail: z.boolean().optional().default(true),
+  notifyInApp: z.boolean().optional().default(true)
+});
+
+export type CreateSavedSearchInput = z.infer<typeof createSavedSearchSchema>;
+
+export const updateViewingStatusSchema = z.object({
+  status: z.enum(['CONFIRMED', 'DECLINED', 'CANCELLED', 'COMPLETED', 'NO_SHOW']),
+  rejectionReason: z.string().max(500).optional()
+});
+
+export type UpdateViewingStatusInput = z.infer<typeof updateViewingStatusSchema>;
+
+export const updatePropertyPriceSchema = z.object({
+  monthlyRent: z.number().positive(),
+  depositAmount: z.number().nonnegative()
+});
+
+export type UpdatePropertyPriceInput = z.infer<typeof updatePropertyPriceSchema>;
+
+

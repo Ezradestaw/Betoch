@@ -26,6 +26,9 @@ import { reportsRoutes } from './modules/reports/reports.routes.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { uploadsRoutes } from './modules/uploads/uploads.routes.js';
 import { aiRoutes } from './modules/ai/ai.routes.js';
+import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
+import { savedSearchesRoutes } from './modules/saved-searches/saved-searches.routes.js';
+import { viewingsRoutes } from './modules/viewings/viewings.routes.js';
 
 const app = Fastify({
   logger: {
@@ -124,6 +127,9 @@ async function bootstrap() {
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });
   await app.register(aiRoutes, { prefix: '/api/v1/ai' });
+  await app.register(notificationsRoutes, { prefix: '/api/v1/notifications' });
+  await app.register(savedSearchesRoutes, { prefix: '/api/v1/saved-searches' });
+  await app.register(viewingsRoutes, { prefix: '/api/v1/viewings' });
 
   // Centralized Error Handling
   app.setErrorHandler((error: any, request, reply) => {

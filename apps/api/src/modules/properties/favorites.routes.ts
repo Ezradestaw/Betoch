@@ -8,15 +8,17 @@ export async function addFavorite(
 ) {
   const userId = request.user!.id;
   const { propertyId } = request.params as { propertyId: string };
+  const { collectionName = 'My Favorites' } = (request.body as { collectionName?: string }) || {};
 
   await query(
-    `INSERT INTO favorites (user_id, property_id)
-     VALUES ($1, $2)
-     ON CONFLICT (user_id, property_id) DO NOTHING`,
-    [userId, propertyId]
+    `INSERT INTO favorites (user_id, property_id, collection_name)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, property_id) 
+     DO UPDATE SET collection_name = EXCLUDED.collection_name`,
+    [userId, propertyId, collectionName]
   );
 
-  return reply.send({ success: true, message: 'Property saved to favorites.' });
+  return reply.send({ success: true, message: `Property saved to ${collectionName}.`, collectionName });
 }
 
 export async function removeFavorite(
@@ -41,7 +43,7 @@ export async function getMyFavorites(request: FastifyRequest, reply: FastifyRepl
     `SELECT 
       p.id, p.title, p.slug, p.property_type, p.bedrooms, p.bathrooms,
       p.size_sqm, p.sub_city, p.neighborhood, p.monthly_rent, p.currency,
-      p.verification_status, f.created_at AS favorited_at,
+      p.verification_status, f.collection_name, f.created_at AS favorited_at,
       (
         SELECT pi.image_url FROM property_images pi
         WHERE pi.property_id = p.id
@@ -71,6 +73,7 @@ export async function getMyFavorites(request: FastifyRequest, reply: FastifyRepl
       currency: row.currency,
       verificationStatus: row.verification_status,
       primaryImage: row.primary_image,
+      collectionName: row.collection_name || 'My Favorites',
       favoritedAt: row.favorited_at
     }))
   });

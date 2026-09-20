@@ -193,9 +193,34 @@ export enum AIRiskLevel {
 
 export enum ViewingRequestStatus {
   PENDING = 'PENDING',
+  REQUESTED = 'REQUESTED',
   CONFIRMED = 'CONFIRMED',
   DECLINED = 'DECLINED',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED',
+  NO_SHOW = 'NO_SHOW'
+}
+
+export interface SavedSearch {
+  id: string;
+  userId: string;
+  name: string;
+  filters: Record<string, any>;
+  notifyEmail: boolean;
+  notifyInApp: boolean;
+  lastAlertedAt?: string | null;
+  createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: string;
+  linkUrl?: string | null;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export interface MatchFactor {

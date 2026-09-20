@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '@betoch/shared';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
+import { NotificationPopover } from './NotificationPopover';
 import {
   Home,
   PlusCircle,
@@ -13,14 +16,34 @@ import {
   User,
   LayoutDashboard,
   Menu,
-  X
+  X,
+  Bell,
+  Settings,
+  ShieldAlert,
+  Search
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Navbar: React.FC = () => {
   const { user, logout, openAuthModal } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const triggerGlobalSearch = () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+  };
+
+  // Unread notifications count
+  const { data: notifData } = useQuery({
+    queryKey: ['unread-notification-count'],
+    queryFn: () => api.getNotifications({ limit: 1 }),
+    enabled: !!user,
+    refetchInterval: 20000
+  });
+  const unreadCount = notifData?.unreadCount || 0;
 
   return (
     <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -43,19 +66,44 @@ export const Navbar: React.FC = () => {
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-700">
             <Link to="/properties" className="hover:text-brand-700 transition-colors">
-              Browse Homes
+              {t('nav.browse')}
             </Link>
             <Link to="/#how-it-works" className="hover:text-brand-700 transition-colors">
               How It Works
             </Link>
-            <Link to="/#trust-safeguards" className="hover:text-brand-700 transition-colors flex items-center gap-1 text-brand-800">
+            <Link to="/trust" className="hover:text-brand-700 transition-colors flex items-center gap-1 text-slate-700">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Why Trust Betoch
+              {t('nav.trust')}
+            </Link>
+            <Link to="/safety" className="hover:text-brand-700 transition-colors flex items-center gap-1 text-slate-700">
+              <ShieldAlert className="w-4 h-4 text-amber-600" />
+              {t('nav.safety')}
             </Link>
           </div>
 
           {/* Right Action Area */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Global Search Button */}
+            <button
+              onClick={triggerGlobalSearch}
+              className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors flex items-center gap-2 text-xs"
+              title="Search everywhere (Cmd+K)"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="text-slate-400">Search...</span>
+              <kbd className="px-1.5 py-0.2 text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200 rounded">
+                ⌘K
+              </kbd>
+            </button>
+
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLanguage(language === 'en' ? 'am' : 'en')}
+              className="px-2 py-1 text-[11px] font-bold rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors"
+              title="Switch Language / ቋንቋ ቀይር"
+            >
+              {language === 'en' ? 'አማርኛ' : 'English'}
+            </button>
             {user ? (
               <div className="flex items-center gap-3">
                 {/* Owner Specific CTA */}
@@ -77,6 +125,25 @@ export const Navbar: React.FC = () => {
                 >
                   <MessageSquare className="w-5 h-5" />
                 </Link>
+
+                {/* Notifications Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative"
+                    title="Notifications"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-brand-700 ring-2 ring-white"></span>
+                    )}
+                  </button>
+
+                  <NotificationPopover
+                    isOpen={notificationsOpen}
+                    onClose={() => setNotificationsOpen(false)}
+                  />
+                </div>
 
                 {/* User Dropdown */}
                 <div className="relative">
@@ -149,6 +216,11 @@ export const Navbar: React.FC = () => {
                       <Link to="/profile/verification" className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 font-medium">
                         <ShieldCheck className="w-4 h-4 text-emerald-600" />
                         Identity Verification (Fayda)
+                      </Link>
+
+                      <Link to="/settings" className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 font-medium">
+                        <Settings className="w-4 h-4 text-slate-400" />
+                        Account Settings
                       </Link>
 
                       <div className="border-t border-slate-100 my-1" />

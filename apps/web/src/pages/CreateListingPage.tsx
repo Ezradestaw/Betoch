@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,9 @@ import {
   Eye,
   Building,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 
 export const CreateListingPage: React.FC = () => {
@@ -24,6 +26,7 @@ export const CreateListingPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedDraftNotice, setSavedDraftNotice] = useState<{ exists: boolean; savedAt?: string } | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -217,12 +220,103 @@ export const CreateListingPage: React.FC = () => {
     }));
   };
 
+  // Check for saved draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('betoch_listing_draft_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.formData?.title || parsed?.formData?.neighborhood) {
+          setSavedDraftNotice({ exists: true, savedAt: parsed.savedAt });
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, []);
+
+  // Auto-save form state to localStorage whenever formData or currentStep updates
+  useEffect(() => {
+    if (formData.title || formData.neighborhood) {
+      const timeout = setTimeout(() => {
+        localStorage.setItem(
+          'betoch_listing_draft_v1',
+          JSON.stringify({ formData, currentStep, savedAt: new Date().toISOString() })
+        );
+      }, 800);
+      return () => clearTimeout(timeout);
+    }
+  }, [formData, currentStep]);
+
+  const handleResumeDraft = () => {
+    try {
+      const saved = localStorage.getItem('betoch_listing_draft_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData) setFormData(parsed.formData);
+        if (parsed.currentStep) setCurrentStep(parsed.currentStep);
+      }
+    } finally {
+      setSavedDraftNotice(null);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    localStorage.removeItem('betoch_listing_draft_v1');
+    setSavedDraftNotice(null);
+  };
+
+  // Completeness calculation
+  const completeness = useMemo(() => {
+    let score = 0;
+    const missing: string[] = [];
+
+    if (formData.title.trim().length >= 10 && formData.description.trim().length >= 30) {
+      score += 20;
+    } else {
+      missing.push('Detailed Title & Description');
+    }
+
+    if (formData.subCity && formData.neighborhood?.trim()) {
+      score += 20;
+    } else {
+      missing.push('Neighborhood details');
+    }
+
+    if (formData.monthlyRent > 0 && formData.depositAmount <= formData.monthlyRent * 2) {
+      score += 20;
+    } else {
+      missing.push('Proclamation-compliant rent & deposit');
+    }
+
+    if (formData.amenityIds.length >= 3) {
+      score += 15;
+    } else {
+      missing.push('Select at least 3 amenities');
+    }
+
+    if (formData.imageUrls.length >= 2) {
+      score += 15;
+    } else {
+      missing.push('Upload at least 2 property photos');
+    }
+
+    if (formData.titleDeedUrl) {
+      score += 10;
+    } else {
+      missing.push('Carta / Title deed upload');
+    }
+
+    return { score, missing };
+  }, [formData]);
+
   const handleFinalSubmit = async () => {
     setError(null);
     setSubmitting(true);
 
     try {
       const res = await api.createProperty(formData);
+      localStorage.removeItem('betoch_listing_draft_v1');
       navigate(`/properties/${res.slug}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create listing. Please verify all required fields.');
@@ -268,7 +362,76 @@ export const CreateListingPage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Dynamic Listing Completeness Meter */}
+          <div className="mt-4 p-3.5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-600" />
+                  Listing Quality Score
+                </span>
+                <span className="font-mono font-bold text-brand-700">{completeness.score}%</span>
+              </div>
+              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    completeness.score >= 80
+                      ? 'bg-emerald-500'
+                      : completeness.score >= 50
+                      ? 'bg-amber-500'
+                      : 'bg-brand-600'
+                  }`}
+                  style={{ width: `${completeness.score}%` }}
+                />
+              </div>
+            </div>
+            {completeness.missing.length > 0 ? (
+              <div className="text-[11px] text-slate-500 sm:text-right shrink-0">
+                Next: <strong className="text-slate-800">{completeness.missing[0]}</strong>
+              </div>
+            ) : (
+              <div className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 shrink-0">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Maximum Inquiries
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Draft Recovery Notification Banner */}
+        {savedDraftNotice?.exists && (
+          <div className="mb-6 p-4 rounded-2xl bg-brand-50 border border-brand-200 text-brand-950 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2">
+              <Save className="w-4 h-4 text-brand-700 shrink-0" />
+              <span>
+                We found an unsaved listing draft from{' '}
+                <strong>
+                  {savedDraftNotice.savedAt
+                    ? new Date(savedDraftNotice.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : 'your last session'}
+                </strong>
+                . Would you like to resume?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="px-3 py-1.5 text-slate-600 hover:text-slate-900 font-semibold"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleResumeDraft}
+                className="px-3.5 py-1.5 rounded-xl bg-brand-700 text-white font-bold hover:bg-brand-800 flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Resume Draft
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">

@@ -18,10 +18,13 @@ export interface PropertyCardItem {
     city: string;
     subCity: string;
     neighborhood: string;
+    latitudeApprox?: number | null;
+    longitudeApprox?: number | null;
   };
   pricing: {
     monthlyRent: number;
     depositAmount: number;
+    previousMonthlyRent?: number | null;
     currency: string;
   };
   verificationStatus: string;
@@ -104,6 +107,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Status Badge overlay */}
         <div className="absolute top-3 left-3 flex flex-col gap-1 items-start">
           <TrustBadge type="property" status={property.verificationStatus} size="sm" />
+          {property.pricing.previousMonthlyRent && property.pricing.previousMonthlyRent > property.pricing.monthlyRent && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow-xs animate-pulse">
+              Price Reduced (-{Math.round(((property.pricing.previousMonthlyRent - property.pricing.monthlyRent) / property.pricing.previousMonthlyRent) * 100)}%)
+            </span>
+          )}
           {property.furnished && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-900/70 text-white backdrop-blur-sm">
               Furnished
@@ -159,6 +167,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div>
           <div className="flex items-baseline justify-between mb-1">
             <div className="flex items-baseline gap-1">
+              {property.pricing.previousMonthlyRent && property.pricing.previousMonthlyRent > property.pricing.monthlyRent && (
+                <span className="text-xs text-slate-400 line-through mr-1">
+                  {property.pricing.previousMonthlyRent.toLocaleString()}
+                </span>
+              )}
               <span className="text-lg font-bold text-slate-900">{formattedRent}</span>
               <span className="text-xs font-semibold text-emerald-800 uppercase">{property.pricing.currency}</span>
               <span className="text-xs text-slate-500">/ month</span>

@@ -2,10 +2,14 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
 import { AIAssistantWidget } from './components/AIAssistantWidget';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { GlobalSearchModal } from './components/GlobalSearchModal';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -17,6 +21,11 @@ import { RenterDashboardPage } from './pages/RenterDashboardPage';
 import { VerificationPortalPage } from './pages/VerificationPortalPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { PaymentCheckoutPage } from './pages/PaymentCheckoutPage';
+import { MessagesPage } from './pages/MessagesPage';
+import { TrustCenterPage } from './pages/TrustCenterPage';
+import { SafetyCenterPage } from './pages/SafetyCenterPage';
+import { OwnerProfilePage } from './pages/OwnerProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
 import { UserRole } from '@betoch/shared';
 
 const queryClient = new QueryClient({
@@ -64,8 +73,19 @@ export const AppContent: React.FC = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/properties/:slug" element={<PropertyDetailsPage />} />
+          <Route path="/trust" element={<TrustCenterPage />} />
+          <Route path="/safety" element={<SafetyCenterPage />} />
+          <Route path="/owners/:ownerId" element={<OwnerProfilePage />} />
 
           {/* Protected Routes */}
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/owner/create-listing"
             element={
@@ -107,6 +127,14 @@ export const AppContent: React.FC = () => {
             }
           />
           <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
@@ -129,6 +157,8 @@ export const AppContent: React.FC = () => {
       <Footer />
       <AuthModal />
       <AIAssistantWidget />
+      <MobileBottomNav />
+      <GlobalSearchModal />
     </div>
   );
 };
@@ -136,11 +166,15 @@ export const AppContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </AuthProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
