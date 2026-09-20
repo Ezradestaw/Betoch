@@ -64,6 +64,32 @@ export const submitIdentityVerificationSchema = z.object({
 
 export type SubmitIdentityVerificationInput = z.infer<typeof submitIdentityVerificationSchema>;
 
+export const startIdentityVerificationSchema = z.object({
+  verificationType: z.enum(['IDENTITY', 'OWNER_IDENTITY', 'RENTER_IDENTITY']).default('IDENTITY'),
+  redirectUrl: z.string().url().optional()
+});
+
+export type StartIdentityVerificationInput = z.infer<typeof startIdentityVerificationSchema>;
+
+export const callbackIdentityVerificationSchema = z.object({
+  state: z.string().min(1, 'State parameter is required'),
+  code: z.string().optional(),
+  reference: z.string().optional(),
+  signature: z.string().optional(),
+  status: z.enum(['SUCCESS', 'FAILED', 'VERIFIED', 'CANCELLED']).optional(),
+  error: z.string().optional(),
+  errorDescription: z.string().optional()
+});
+
+export type CallbackIdentityVerificationInput = z.infer<typeof callbackIdentityVerificationSchema>;
+
+export const revokeIdentityVerificationSchema = z.object({
+  targetUserId: z.string().uuid('Valid user ID required'),
+  reason: z.string().min(5, 'Revocation reason must be at least 5 characters').max(500)
+});
+
+export type RevokeIdentityVerificationInput = z.infer<typeof revokeIdentityVerificationSchema>;
+
 export const reviewIdentityVerificationSchema = z.object({
   decision: z.enum(['APPROVED', 'REJECTED', 'REQUIRES_INFO']),
   rejectionReason: z.string().max(500).optional()

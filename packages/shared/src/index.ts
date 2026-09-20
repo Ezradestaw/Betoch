@@ -10,10 +10,49 @@ export enum UserRole {
 
 export enum IdentityStatus {
   UNVERIFIED = 'UNVERIFIED',
-  PENDING = 'PENDING',
+  VERIFICATION_PENDING = 'VERIFICATION_PENDING',
   VERIFIED = 'VERIFIED',
+  VERIFICATION_FAILED = 'VERIFICATION_FAILED',
+  VERIFICATION_EXPIRED = 'VERIFICATION_EXPIRED',
+  VERIFICATION_REVOKED = 'VERIFICATION_REVOKED',
+  // Backward-compatible aliases
+  PENDING = 'PENDING',
   REJECTED = 'REJECTED',
   REQUIRES_INFO = 'REQUIRES_INFO'
+}
+
+export enum VerificationRecordStatus {
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  REVOKED = 'REVOKED',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum VerificationType {
+  IDENTITY = 'IDENTITY',
+  OWNER_IDENTITY = 'OWNER_IDENTITY',
+  RENTER_IDENTITY = 'RENTER_IDENTITY'
+}
+
+export interface VerificationSessionResponse {
+  sessionId: string;
+  verificationReference: string;
+  provider: string;
+  redirectUrl: string;
+  expiresAt: string;
+}
+
+export interface IdentityVerificationStatusResponse {
+  status: IdentityStatus;
+  provider?: string;
+  verifiedAt?: string;
+  expiresAt?: string;
+  maskedReference?: string;
+  failureCode?: string;
+  failureReasonSafe?: string;
+  canRetry: boolean;
 }
 
 export enum IdDocumentType {

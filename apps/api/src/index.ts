@@ -29,6 +29,7 @@ import { aiRoutes } from './modules/ai/ai.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { savedSearchesRoutes } from './modules/saved-searches/saved-searches.routes.js';
 import { viewingsRoutes } from './modules/viewings/viewings.routes.js';
+import { identityRoutes } from './modules/identity/identity.routes.js';
 
 const app = Fastify({
   logger: {
@@ -130,6 +131,8 @@ async function bootstrap() {
   await app.register(notificationsRoutes, { prefix: '/api/v1/notifications' });
   await app.register(savedSearchesRoutes, { prefix: '/api/v1/saved-searches' });
   await app.register(viewingsRoutes, { prefix: '/api/v1/viewings' });
+  await app.register(identityRoutes, { prefix: '/api/v1/identity-verification' });
+
 
   // Centralized Error Handling
   app.setErrorHandler((error: any, request, reply) => {

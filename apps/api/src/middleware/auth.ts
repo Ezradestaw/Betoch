@@ -53,3 +53,36 @@ export function requireRole(...allowedRoles: UserRole[]) {
     }
   };
 }
+
+export async function requireVerifiedIdentity(request: FastifyRequest, reply: FastifyReply) {
+  if (!request.user) {
+    return reply.status(401).send({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required.' }
+    });
+  }
+
+  // Admins bypass standard renter/owner identity gating
+  if (request.user.role === UserRole.ADMIN) {
+    return;
+  }
+
+  const { query } = await import('../database/db.js');
+  const res = await query(
+    `SELECT identity_status FROM user_profiles WHERE user_id = $1`,
+    [request.user.id]
+  );
+  const status = res.rows[0]?.identity_status;
+
+  if (status !== 'VERIFIED') {
+    return reply.status(403).send({
+      success: false,
+      error: {
+        code: 'IDENTITY_VERIFICATION_REQUIRED',
+        message: 'Verified national identity is required before performing this action. Please complete your Fayda verification.',
+        currentStatus: status || 'UNVERIFIED'
+      }
+    });
+  }
+}
+

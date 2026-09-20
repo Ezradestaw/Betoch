@@ -30,7 +30,9 @@ export async function getAnalytics(request: FastifyRequest, reply: FastifyReply)
 export async function getPendingVerifications(request: FastifyRequest, reply: FastifyReply) {
   const res = await query(
     `SELECT iv.id, iv.user_id, iv.id_type, iv.id_number_masked, iv.document_front_url,
-            iv.document_back_url, iv.status, iv.created_at,
+            iv.document_back_url, iv.status, iv.created_at, iv.started_at,
+            COALESCE(iv.provider, 'fayda') AS provider,
+            COALESCE(iv.verification_type, 'IDENTITY') AS verification_type,
             u.email, u.phone, u.role,
             up.first_name, up.last_name
      FROM identity_verifications iv
@@ -49,14 +51,17 @@ export async function getPendingVerifications(request: FastifyRequest, reply: Fa
       email: row.email,
       phone: row.phone,
       role: row.role,
-      idType: row.id_type,
-      maskedId: row.id_number_masked,
+      idType: row.id_type || 'FAYDA_DIGITAL_ID',
+      provider: row.provider,
+      verificationType: row.verification_type,
+      maskedId: row.id_number_masked || 'FIN-••••-PENDING',
       documentFrontUrl: row.document_front_url,
       documentBackUrl: row.document_back_url,
-      submittedAt: row.created_at
+      submittedAt: row.started_at || row.created_at
     }))
   });
 }
+
 
 export async function getPendingProperties(request: FastifyRequest, reply: FastifyReply) {
   const res = await query(

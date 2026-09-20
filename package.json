@@ -13,7 +13,7 @@
     "dev:api": "npm run dev -w @betoch/api",
     "dev:web": "npm run dev -w @betoch/web",
     "build": "npm run build -w @betoch/shared && npm run build -w @betoch/validation && npm run build -w @betoch/config && npm run build -w @betoch/api && npm run build -w @betoch/web",
-    "test": "tsx --test tests/commission.test.ts tests/telebirr.test.ts tests/validation.test.ts tests/ai.test.ts",
+    "test": "tsx --test tests/commission.test.ts tests/telebirr.test.ts tests/validation.test.ts tests/ai.test.ts tests/identity.test.ts",
     "db:migrate": "node database/migrate.js",
     "db:seed": "node database/seed.js",
     "lint": "npm run lint -w @betoch/api && npm run lint -w @betoch/web"

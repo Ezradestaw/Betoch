@@ -107,6 +107,30 @@ export const api = {
       body: JSON.stringify({ decision, rejectionReason })
     }),
 
+  // National ID / Fayda Modular Verification Endpoints
+  startIdentityVerification: (body?: { verificationType?: string; redirectUrl?: string }) =>
+    request<any>('/identity-verification/start', {
+      method: 'POST',
+      body: JSON.stringify(body || {})
+    }),
+  getNationalIdentityStatus: () =>
+    request<any>('/identity-verification/status'),
+  retryIdentityVerification: () =>
+    request<any>('/identity-verification/retry', {
+      method: 'POST'
+    }),
+  simulateMockVerification: (body: { state: string; outcome?: 'APPROVED' | 'REJECTED'; failureReason?: string }) =>
+    request<any>('/identity-verification/mock/simulate', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }),
+  revokeIdentityVerification: (userId: string, reason: string) =>
+    request<any>(`/identity-verification/revoke/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    }),
+
+
   // Messaging
   getConversations: () => request<any[]>('/conversations'),
   startConversation: (body: any) => request<any>('/conversations', { method: 'POST', body: JSON.stringify(body) }),
