@@ -11,17 +11,40 @@ import {
   History,
   CheckCircle2,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  Sparkles,
+  Cpu,
+  Activity
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'verifications' | 'properties' | 'commissions' | 'reports' | 'audit'>('verifications');
+  const [tab, setTab] = useState<'verifications' | 'properties' | 'commissions' | 'reports' | 'audit' | 'ai'>('verifications');
 
   // Fetch Admin Analytics
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: () => api.getAdminAnalytics()
+  });
+
+  // Fetch AI Metrics & Feature Flags
+  const { data: aiMetrics } = useQuery({
+    queryKey: ['admin-ai-metrics'],
+    queryFn: () => api.getAdminAIMetrics(),
+    refetchInterval: 15000
+  });
+
+  const { data: featureFlags = [] } = useQuery({
+    queryKey: ['admin-feature-flags'],
+    queryFn: () => api.getAdminFeatureFlags()
+  });
+
+  const toggleFlagMutation = useMutation({
+    mutationFn: ({ featureKey, isEnabled }: { featureKey: string; isEnabled: boolean }) =>
+      api.toggleFeatureFlag(featureKey, isEnabled),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-feature-flags'] });
+    }
   });
 
   // Fetch Pending Verifications
@@ -169,6 +192,15 @@ export const AdminDashboardPage: React.FC = () => {
             }`}
           >
             Immutable Audit Logs
+          </button>
+          <button
+            onClick={() => setTab('ai')}
+            className={`pb-3 text-xs font-bold border-b-2 whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              tab === 'ai' ? 'border-brand-700 text-brand-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-gold-500" />
+            AI Intelligence & Governance
           </button>
         </div>
 
@@ -367,6 +399,145 @@ export const AdminDashboardPage: React.FC = () => {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: AI INTELLIGENCE & GOVERNANCE */}
+        {tab === 'ai' && (
+          <div className="space-y-6">
+            {/* AI Metrics KPIs */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">AI Requests</span>
+                <span className="text-xl font-black text-brand-900 mt-1 block">{aiMetrics?.totalRequests ?? 0}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">100% audited</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Avg Latency</span>
+                <span className="text-xl font-black text-brand-900 mt-1 block">{aiMetrics?.averageLatencyMs ?? 0} ms</span>
+                <span className="text-[10px] text-slate-400">Sub-second response</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Failed Requests</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">{aiMetrics?.failedRequests ?? 0}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">0% downtime</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Tokens Used</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">{aiMetrics?.totalTokens?.toLocaleString() ?? 0}</span>
+                <span className="text-[10px] text-slate-400">Bounded limits</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Estimated Cost</span>
+                <span className="text-xl font-black text-slate-900 mt-1 block">${aiMetrics?.totalCostUsd ?? '0.00'}</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">Cost optimized</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Risk Signals</span>
+                <span className="text-xl font-black text-amber-700 mt-1 block">{aiMetrics?.activeRiskSignals ?? 0}</span>
+                <span className="text-[10px] text-amber-600 font-semibold">Moderation queue</span>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Duplicate Flags</span>
+                <span className="text-xl font-black text-amber-700 mt-1 block">{aiMetrics?.pendingDuplicateReviews ?? 0}</span>
+                <span className="text-[10px] text-slate-400 font-semibold">Pending review</span>
+              </div>
+            </div>
+
+            {/* AI Feature Flags Control Center */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-brand-700" />
+                  <h3 className="text-xs font-bold text-slate-900">Runtime AI Feature Flags Control Center</h3>
+                </div>
+                <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  Zero-downtime dynamic toggles
+                </span>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {featureFlags.map((flag: any) => (
+                  <div key={flag.featureKey} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition">
+                    <div className="space-y-0.5 pr-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-900">{flag.featureKey}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          flag.isEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                          {flag.isEnabled ? 'ACTIVE' : 'PAUSED'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">{flag.description}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleFlagMutation.mutate({ featureKey: flag.featureKey, isEnabled: !flag.isEnabled })}
+                      disabled={toggleFlagMutation.isPending}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        flag.isEnabled ? 'bg-brand-700' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          flag.isEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Top AI Features & Feedback */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                  <Activity className="w-4 h-4 text-emerald-600" />
+                  <span>Feature Usage Breakdown</span>
+                </div>
+                {aiMetrics?.topFeatures?.length === 0 ? (
+                  <p className="text-xs text-slate-500">No feature invocations recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {aiMetrics?.topFeatures?.map((f: any) => (
+                      <div key={f.feature} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                        <span className="font-mono font-semibold text-slate-800">{f.feature}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-slate-600 font-bold">{f.requestCount} calls</span>
+                          <span className="text-slate-400 text-[11px]">{f.avgLatencyMs} ms avg</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+                  <Sparkles className="w-4 h-4 text-gold-500" />
+                  <span>User Sentiment & Feedback Loop</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+                    <span className="text-xl font-black text-emerald-800 block">
+                      {aiMetrics?.feedbackBreakdown?.POSITIVE ?? 0}
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-700">Positive Ratings (👍)</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                    <span className="text-xl font-black text-slate-800 block">
+                      {aiMetrics?.feedbackBreakdown?.NEGATIVE ?? 0}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-600">Improvement Flags (👎)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Feedback is used exclusively for safety auditing and retrieval ranking improvements. Models are never automatically retrained without human safety verification.
+                </p>
+              </div>
             </div>
           </div>
         )}

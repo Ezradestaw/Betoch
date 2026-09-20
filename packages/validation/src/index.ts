@@ -235,3 +235,122 @@ export const submitReportSchema = z.object({
   reason: z.string().min(3).max(100),
   description: z.string().min(10, 'Please provide details for moderation').max(2000)
 });
+
+// ==============================================================================
+// AI INTELLIGENCE LAYER VALIDATION SCHEMAS
+// ==============================================================================
+
+export const naturalLanguageSearchSchema = z.object({
+  query: z.string().min(2, 'Search query must be at least 2 characters').max(500)
+});
+
+export type NaturalLanguageSearchInput = z.infer<typeof naturalLanguageSearchSchema>;
+
+export const generateDescriptionSchema = z.object({
+  propertyType: z.string(),
+  bedrooms: z.number().int().min(0),
+  bathrooms: z.number().min(0.5),
+  subCity: z.string(),
+  neighborhood: z.string(),
+  sizeSqm: z.number().positive().optional(),
+  furnished: z.boolean().default(false),
+  monthlyRent: z.number().positive().optional(),
+  amenities: z.array(z.string()).default([]),
+  ownerNotes: z.string().max(500).optional()
+});
+
+export type GenerateDescriptionInput = z.infer<typeof generateDescriptionSchema>;
+
+export const analyzeQualitySchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  propertyType: z.string().optional(),
+  sizeSqm: z.number().optional(),
+  bedrooms: z.number().optional(),
+  bathrooms: z.number().optional(),
+  monthlyRent: z.number().optional(),
+  depositAmount: z.number().optional(),
+  imageUrls: z.array(z.string()).optional(),
+  amenityIds: z.array(z.string()).optional(),
+  subCity: z.string().optional(),
+  neighborhood: z.string().optional(),
+  availableFrom: z.string().optional()
+});
+
+export type AnalyzeQualityInput = z.infer<typeof analyzeQualitySchema>;
+
+export const estimatePriceSchema = z.object({
+  subCity: z.string(),
+  propertyType: z.string(),
+  bedrooms: z.number().int().min(0),
+  bathrooms: z.number().min(0.5).optional(),
+  sizeSqm: z.number().positive().optional(),
+  furnished: z.boolean().optional(),
+  amenityIds: z.array(z.string()).optional()
+});
+
+export type EstimatePriceInput = z.infer<typeof estimatePriceSchema>;
+
+export const comparePropertiesSchema = z.object({
+  propertyIds: z.array(z.string().uuid()).min(2, 'Select at least 2 properties to compare').max(4, 'Maximum 4 properties can be compared')
+});
+
+export type ComparePropertiesInput = z.infer<typeof comparePropertiesSchema>;
+
+export const userPreferencesSchema = z.object({
+  budget: z.number().positive().optional(),
+  subCity: z.string().optional(),
+  bedrooms: z.number().int().min(0).optional(),
+  bathrooms: z.number().min(0.5).optional(),
+  propertyType: z.string().optional(),
+  furnished: z.boolean().optional(),
+  amenities: z.array(z.string()).optional()
+});
+
+export type UserPreferencesInput = z.infer<typeof userPreferencesSchema>;
+
+export const aiPreferenceMatchSchema = z.object({
+  propertyId: z.string().uuid(),
+  preferences: userPreferencesSchema
+});
+
+export const assistantChatSchema = z.object({
+  message: z.string().min(1, 'Message cannot be empty').max(2000),
+  conversationHistory: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().max(3000)
+      })
+    )
+    .optional()
+    .default([])
+});
+
+export type AssistantChatInput = z.infer<typeof assistantChatSchema>;
+
+export const createViewingRequestSchema = z.object({
+  propertyId: z.string().uuid(),
+  proposedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format must be YYYY-MM-DD'),
+  timeSlot: z.enum(['MORNING_9_12', 'AFTERNOON_12_3', 'EVENING_3_6']),
+  notes: z.string().max(500).optional()
+});
+
+export type CreateViewingRequestInput = z.infer<typeof createViewingRequestSchema>;
+
+export const aiFeedbackSchema = z.object({
+  feature: z.string(),
+  resourceId: z.string().optional(),
+  rating: z.enum(['POSITIVE', 'NEGATIVE']),
+  comment: z.string().max(500).optional()
+});
+
+export type AiFeedbackInput = z.infer<typeof aiFeedbackSchema>;
+
+export const toggleFeatureFlagSchema = z.object({
+  featureKey: z.string(),
+  isEnabled: z.boolean()
+});
+
+export type ToggleFeatureFlagInput = z.infer<typeof toggleFeatureFlagSchema>;
+

@@ -146,5 +146,34 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error?.message || 'Upload failed.');
     return data.data;
-  }
+  },
+
+  // AI Intelligence Layer Endpoints
+  searchNaturalLanguage: (query: string) =>
+    request<any>('/ai/search', { method: 'POST', body: JSON.stringify({ query }) }),
+  getRecommendations: () => request<any>('/ai/recommendations'),
+  calculatePreferenceMatch: (propertyId: string, preferences: any) =>
+    request<any>('/ai/match', { method: 'POST', body: JSON.stringify({ propertyId, preferences }) }),
+  generateDescription: (body: any) =>
+    request<any>('/ai/description/generate', { method: 'POST', body: JSON.stringify(body) }),
+  analyzeQuality: (body: any) =>
+    request<any>('/ai/quality/analyze', { method: 'POST', body: JSON.stringify(body) }),
+  estimatePrice: (body: any) =>
+    request<any>('/ai/pricing/estimate', { method: 'POST', body: JSON.stringify(body) }),
+  analyzePhotos: (imageUrls: string[]) =>
+    request<any[]>('/ai/photos/analyze', { method: 'POST', body: JSON.stringify({ imageUrls }) }),
+  compareProperties: (propertyIds: string[]) =>
+    request<any>('/ai/properties/compare', { method: 'POST', body: JSON.stringify({ propertyIds }) }),
+  chatWithAssistant: (message: string, conversationHistory: any[] = []) =>
+    request<any>('/ai/assistant/chat', { method: 'POST', body: JSON.stringify({ message, conversationHistory }) }),
+  createViewingRequest: (body: { propertyId: string; proposedDate: string; timeSlot: string; notes?: string }) =>
+    request<any>('/ai/viewings', { method: 'POST', body: JSON.stringify(body) }),
+  getPropertyViewings: (propertyId: string) => request<any[]>(`/ai/viewings/property/${propertyId}`),
+  submitAiFeedback: (feature: string, rating: 'POSITIVE' | 'NEGATIVE', resourceId?: string, comment?: string) =>
+    request<any>('/ai/feedback', { method: 'POST', body: JSON.stringify({ feature, rating, resourceId, comment }) }),
+  getRiskReport: (type: 'user' | 'property', id: string) => request<any>(`/ai/risk/${type}/${id}`),
+  getAdminAIMetrics: () => request<any>('/ai/admin/metrics'),
+  getAdminFeatureFlags: () => request<any[]>('/ai/admin/feature-flags'),
+  toggleFeatureFlag: (featureKey: string, isEnabled: boolean) =>
+    request<any>('/ai/admin/feature-flags/toggle', { method: 'POST', body: JSON.stringify({ featureKey, isEnabled }) })
 };

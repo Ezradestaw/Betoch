@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { AuthModal } from './components/AuthModal';
+import { AIAssistantWidget } from './components/AIAssistantWidget';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -127,6 +128,7 @@ export const AppContent: React.FC = () => {
       </main>
       <Footer />
       <AuthModal />
+      <AIAssistantWidget />
     </div>
   );
 };

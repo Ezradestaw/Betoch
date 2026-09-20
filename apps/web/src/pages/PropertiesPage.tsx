@@ -2,9 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { PropertyCard } from '../components/PropertyCard';
-import { ADDIS_ABABA_SUBCITIES, AMENITIES_CATALOG } from '@betoch/shared';
-import { Search, SlidersHorizontal, RotateCcw, Building, ShieldCheck } from 'lucide-react';
+import { PropertyCard, PropertyCardItem } from '../components/PropertyCard';
+import { PreferenceMatchModal } from '../components/PreferenceMatchModal';
+import { PropertyComparisonModal } from '../components/PropertyComparisonModal';
+import { ADDIS_ABABA_SUBCITIES, AMENITIES_CATALOG, PropertyComparisonResult } from '@betoch/shared';
+import {
+  Search,
+  SlidersHorizontal,
+  RotateCcw,
+  Building,
+  ShieldCheck,
+  Sparkles,
+  Scale,
+  X,
+  ArrowRight
+} from 'lucide-react';
 
 export const PropertiesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +36,21 @@ export const PropertiesPage: React.FC = () => {
   );
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [page, setPage] = useState(parseInt(searchParams.get('page') || '1', 10));
+
+  // AI Intelligence Layer States
+  const [nlQuery, setNlQuery] = useState('');
+  const [isNlSearching, setIsNlSearching] = useState(false);
+  const [aiInterpretation, setAiInterpretation] = useState<string | null>(null);
+
+  // Property Comparison State
+  const [compareList, setCompareList] = useState<PropertyCardItem[]>([]);
+  const [comparisonResult, setComparisonResult] = useState<PropertyComparisonResult | null>(null);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  const [isComparingLoading, setIsComparingLoading] = useState(false);
+
+  // Preference Match State
+  const [matchingProperty, setMatchingProperty] = useState<PropertyCardItem | null>(null);
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
 
   // Sync state to URL params
   const applyFilters = () => {
@@ -66,6 +93,65 @@ export const PropertiesPage: React.FC = () => {
     );
   };
 
+  const handleNLSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!nlQuery.trim()) return;
+
+    setIsNlSearching(true);
+    try {
+      const res = await api.searchNaturalLanguage(nlQuery.trim());
+      setAiInterpretation(res.interpretationSummary);
+
+      const f = res.structuredFilters;
+      if (f.subCity) setSubCity(f.subCity);
+      if (f.propertyType) setPropertyType(f.propertyType);
+      if (f.bedrooms !== undefined) setBedrooms(String(f.bedrooms));
+      if (f.maxRent !== undefined) setMaxRent(String(f.maxRent));
+      if (f.minRent !== undefined) setMinRent(String(f.minRent));
+      if (f.furnished !== undefined) setFurnished(f.furnished);
+      if (f.amenities) setSelectedAmenities(f.amenities.split(','));
+
+      setPage(1);
+    } catch (err) {
+      console.error('AI Natural language search failed', err);
+    } finally {
+      setIsNlSearching(false);
+    }
+  };
+
+  const handleToggleCompare = (property: PropertyCardItem) => {
+    setCompareList((prev) => {
+      const exists = prev.some((p) => p.id === property.id);
+      if (exists) {
+        return prev.filter((p) => p.id !== property.id);
+      }
+      if (prev.length >= 4) {
+        alert('You can compare a maximum of 4 properties at a time.');
+        return prev;
+      }
+      return [...prev, property];
+    });
+  };
+
+  const handleRunComparison = async () => {
+    if (compareList.length < 2) return;
+    setIsComparingLoading(true);
+    try {
+      const res = await api.compareProperties(compareList.map((p) => p.id));
+      setComparisonResult(res);
+      setIsCompareModalOpen(true);
+    } catch (err: any) {
+      alert(err.message || 'Comparison failed.');
+    } finally {
+      setIsComparingLoading(false);
+    }
+  };
+
+  const handleCheckMatch = (property: PropertyCardItem) => {
+    setMatchingProperty(property);
+    setIsMatchModalOpen(true);
+  };
+
   // Fetch properties query
   const { data, isLoading, refetch } = useQuery({
     queryKey: [
@@ -104,7 +190,86 @@ export const PropertiesPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top Header & Search Bar */}
+        {/* AI Natural Language Search Box */}
+        <div className="bg-gradient-to-r from-brand-900 via-brand-800 to-slate-900 rounded-2xl p-4 sm:p-5 mb-6 text-white shadow-md border border-brand-700/50">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gold-400/20 text-gold-300">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold tracking-wide">AI Smart Search</h3>
+                <p className="text-[11px] text-slate-300">Search naturally in English (e.g. "2-bed in Bole under 35k with generator")</p>
+              </div>
+            </div>
+
+            {aiInterpretation && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full text-[11px] text-gold-300 border border-gold-400/30">
+                <span>{aiInterpretation}</span>
+                <button
+                  onClick={() => setAiInterpretation(null)}
+                  className="p-0.5 hover:text-white"
+                  title="Clear AI filter banner"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleNLSearch} className="flex gap-2">
+            <input
+              type="text"
+              value={nlQuery}
+              onChange={(e) => setNlQuery(e.target.value)}
+              placeholder="Tell Betoch AI what you're looking for..."
+              className="flex-1 px-4 py-2.5 text-xs rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:bg-white/20"
+            />
+            <button
+              type="submit"
+              disabled={isNlSearching || !nlQuery.trim()}
+              className="px-4 py-2.5 bg-gold-500 hover:bg-gold-600 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isNlSearching ? 'Analyzing...' : 'AI Search'}</span>
+            </button>
+          </form>
+
+          {/* Prompt chips */}
+          <div className="mt-2.5 flex flex-wrap gap-1.5 text-[10px]">
+            <span className="text-slate-400 self-center">Try:</span>
+            {[
+              '2-bedroom in Bole under 45k with generator',
+              'Furnished apartment in Kazanchis',
+              'Villa with backup water tank under 60k',
+              'Studio under 20k'
+            ].map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setNlQuery(chip);
+                  api.searchNaturalLanguage(chip).then((res) => {
+                    setAiInterpretation(res.interpretationSummary);
+                    const f = res.structuredFilters;
+                    if (f.subCity) setSubCity(f.subCity);
+                    if (f.propertyType) setPropertyType(f.propertyType);
+                    if (f.bedrooms !== undefined) setBedrooms(String(f.bedrooms));
+                    if (f.maxRent !== undefined) setMaxRent(String(f.maxRent));
+                    if (f.furnished !== undefined) setFurnished(f.furnished);
+                    if (f.amenities) setSelectedAmenities(f.amenities.split(','));
+                    setPage(1);
+                  });
+                }}
+                className="px-2 py-0.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Regular Filter Bar */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-6 shadow-sm">
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="relative flex-1 w-full">
@@ -326,12 +491,67 @@ export const PropertiesPage: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                 {data?.items?.map((p: any) => (
-                  <PropertyCard key={p.id} property={p} />
+                  <PropertyCard
+                    key={p.id}
+                    property={p}
+                    isCompareSelected={compareList.some((c) => c.id === p.id)}
+                    onToggleCompare={handleToggleCompare}
+                    onCheckMatch={handleCheckMatch}
+                  />
                 ))}
               </div>
             )}
           </div>
         </div>
+
+        {/* Floating Property Comparison Bottom Bar */}
+        {compareList.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in slide-in-from-bottom-5">
+            <div className="flex items-center gap-2">
+              <Scale className="w-4 h-4 text-gold-400" />
+              <span className="text-xs font-bold">{compareList.length} of 4 selected for comparison</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRunComparison}
+                disabled={compareList.length < 2 || isComparingLoading}
+                className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{isComparingLoading ? 'Comparing...' : 'Compare Properties'}</span>
+              </button>
+
+              <button
+                onClick={() => setCompareList([])}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg transition"
+                title="Clear comparison"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Preference Match Modal */}
+        {matchingProperty && (
+          <PreferenceMatchModal
+            propertyId={matchingProperty.id}
+            propertyTitle={matchingProperty.title}
+            isOpen={isMatchModalOpen}
+            onClose={() => {
+              setIsMatchModalOpen(false);
+              setMatchingProperty(null);
+            }}
+          />
+        )}
+
+        {/* Side-by-Side Comparison Modal */}
+        <PropertyComparisonModal
+          comparison={comparisonResult}
+          isOpen={isCompareModalOpen}
+          onClose={() => setIsCompareModalOpen(false)}
+        />
       </div>
     </div>
   );

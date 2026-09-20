@@ -44,6 +44,13 @@ const envSchema = z.object({
   DEFAULT_COMMISSION_PERCENT: z.coerce.number().default(10.0),
   MAX_DEPOSIT_MONTHS: z.coerce.number().default(2),
 
+  // AI Intelligence Layer Configuration
+  AI_ENABLED: z.coerce.boolean().default(true),
+  AI_PROVIDER: z.enum(['local', 'gemini', 'openai', 'mock']).default('local'),
+  AI_API_KEY: z.string().optional().default(''),
+  AI_MODEL: z.string().default('local-rules-engine'),
+  AI_CACHE_TTL_SECONDS: z.coerce.number().default(3600),
+
   LOG_LEVEL: z.string().default('info')
 });
 

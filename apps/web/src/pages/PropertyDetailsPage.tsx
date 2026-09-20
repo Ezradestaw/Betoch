@@ -7,6 +7,8 @@ import { TrustBadge } from '../components/TrustBadge';
 import { ApplicationModal } from '../components/ApplicationModal';
 import { MessagingDrawer } from '../components/MessagingDrawer';
 import { ReportModal } from '../components/ReportModal';
+import { ScheduleViewingModal } from '../components/ScheduleViewingModal';
+import { PreferenceMatchModal } from '../components/PreferenceMatchModal';
 import {
   MapPin,
   Bed,
@@ -30,7 +32,8 @@ import {
   Utensils,
   Flame,
   Layers,
-  Heart
+  Heart,
+  Sparkles
 } from 'lucide-react';
 
 const amenityIcons: Record<string, any> = {
@@ -56,6 +59,8 @@ export const PropertyDetailsPage: React.FC = () => {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isMessageDrawerOpen, setIsMessageDrawerOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isViewingModalOpen, setIsViewingModalOpen] = useState(false);
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [applySuccessMessage, setApplySuccessMessage] = useState<string | null>(null);
 
   const { data: property, isLoading, error } = useQuery({
@@ -328,10 +333,32 @@ export const PropertyDetailsPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={handleMessageClick}
-                  className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                  onClick={() => {
+                    if (!user) {
+                      openAuthModal('login');
+                      return;
+                    }
+                    setIsViewingModalOpen(true);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold text-xs flex items-center justify-center gap-2 transition-all"
                 >
-                  <MessageSquare className="w-4 h-4 text-emerald-600" />
+                  <Calendar className="w-4 h-4 text-emerald-700" />
+                  Schedule In-Person Viewing
+                </button>
+
+                <button
+                  onClick={() => setIsMatchModalOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-900 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                >
+                  <Sparkles className="w-4 h-4 text-brand-600" />
+                  Calculate Preference Match
+                </button>
+
+                <button
+                  onClick={handleMessageClick}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                >
+                  <MessageSquare className="w-4 h-4 text-slate-600" />
                   Direct Message Owner
                 </button>
               </div>
@@ -389,6 +416,20 @@ export const PropertyDetailsPage: React.FC = () => {
         reportedUserId={property.owner.id}
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
+      />
+
+      <ScheduleViewingModal
+        propertyId={property.id}
+        propertyTitle={property.title}
+        isOpen={isViewingModalOpen}
+        onClose={() => setIsViewingModalOpen(false)}
+      />
+
+      <PreferenceMatchModal
+        propertyId={property.id}
+        propertyTitle={property.title}
+        isOpen={isMatchModalOpen}
+        onClose={() => setIsMatchModalOpen(false)}
       />
     </div>
   );

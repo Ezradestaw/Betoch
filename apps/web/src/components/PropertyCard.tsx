@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MapPin, Bed, Bath, Maximize2 } from 'lucide-react';
+import { Heart, MapPin, Bed, Bath, Maximize2, Scale, Sparkles } from 'lucide-react';
 import { TrustBadge } from './TrustBadge';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -37,9 +37,18 @@ export interface PropertyCardItem {
 interface PropertyCardProps {
   property: PropertyCardItem;
   onFavoriteChange?: (id: string, isFav: boolean) => void;
+  isCompareSelected?: boolean;
+  onToggleCompare?: (property: PropertyCardItem) => void;
+  onCheckMatch?: (property: PropertyCardItem) => void;
 }
 
-export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onFavoriteChange }) => {
+export const PropertyCard: React.FC<PropertyCardProps> = ({
+  property,
+  onFavoriteChange,
+  isCompareSelected,
+  onToggleCompare,
+  onCheckMatch
+}) => {
   const { user, openAuthModal } = useAuth();
   const [isFavorite, setIsFavorite] = useState(property.isFavorite || false);
   const [favLoading, setFavLoading] = useState(false);
@@ -102,20 +111,41 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onFavorite
           )}
         </div>
 
-        {/* Favorite Heart Button */}
-        <button
-          type="button"
-          onClick={toggleFavorite}
-          disabled={favLoading}
-          className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all shadow-sm ${
-            isFavorite
-              ? 'bg-red-500 text-white'
-              : 'bg-white/80 text-slate-700 hover:bg-white hover:text-red-500'
-          }`}
-          title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
-        >
-          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-        </button>
+        {/* Favorite & Compare Buttons */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          {onToggleCompare && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleCompare(property);
+              }}
+              className={`p-2 rounded-full backdrop-blur-md transition-all shadow-sm ${
+                isCompareSelected
+                  ? 'bg-brand-700 text-white'
+                  : 'bg-white/80 text-slate-700 hover:bg-white hover:text-brand-700'
+              }`}
+              title={isCompareSelected ? 'Remove from comparison' : 'Compare property'}
+            >
+              <Scale className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            disabled={favLoading}
+            className={`p-2 rounded-full backdrop-blur-md transition-all shadow-sm ${
+              isFavorite
+                ? 'bg-red-500 text-white'
+                : 'bg-white/80 text-slate-700 hover:bg-white hover:text-red-500'
+            }`}
+            title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+          >
+            <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+          </button>
+        </div>
 
         {/* Location pill on bottom left of image */}
         <div className="absolute bottom-2.5 left-3 flex items-center gap-1 text-[11px] font-medium text-white bg-slate-950/60 backdrop-blur-md px-2 py-0.5 rounded-md">
@@ -144,19 +174,36 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property, onFavorite
         </div>
 
         {/* Features Row */}
-        <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 font-medium">
-          <div className="flex items-center gap-1" title="Bedrooms">
-            <Bed className="w-3.5 h-3.5 text-slate-400" />
-            <span>{property.bedrooms} Beds</span>
+        <div>
+          <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 font-medium">
+            <div className="flex items-center gap-1" title="Bedrooms">
+              <Bed className="w-3.5 h-3.5 text-slate-400" />
+              <span>{property.bedrooms} Beds</span>
+            </div>
+            <div className="flex items-center gap-1" title="Bathrooms">
+              <Bath className="w-3.5 h-3.5 text-slate-400" />
+              <span>{property.bathrooms} Baths</span>
+            </div>
+            <div className="flex items-center gap-1" title="Area">
+              <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
+              <span>{property.sizeSqm} m²</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1" title="Bathrooms">
-            <Bath className="w-3.5 h-3.5 text-slate-400" />
-            <span>{property.bathrooms} Baths</span>
-          </div>
-          <div className="flex items-center gap-1" title="Area">
-            <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
-            <span>{property.sizeSqm} m²</span>
-          </div>
+
+          {onCheckMatch && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onCheckMatch(property);
+              }}
+              className="mt-2.5 w-full py-1.5 px-2 bg-brand-50 hover:bg-brand-100 text-brand-800 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition"
+            >
+              <Sparkles className="w-3 h-3 text-brand-600" />
+              <span>Calculate Preference Match</span>
+            </button>
+          )}
         </div>
       </div>
     </Link>

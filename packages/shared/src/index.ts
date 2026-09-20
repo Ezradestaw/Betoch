@@ -168,3 +168,124 @@ export const ETHIOPIAN_RENTAL_REGULATIONS = {
   CURRENCY: 'ETB',
   DEFAULT_COMMISSION_PERCENT: 10.0 // 10% of 1 month rent (landlord side)
 };
+
+// ------------------------------------------------------------------------------
+// AI Intelligence Layer Types & Constants
+// ------------------------------------------------------------------------------
+
+export enum AIFeatureKey {
+  AI_PROPERTY_SEARCH = 'AI_PROPERTY_SEARCH',
+  AI_RECOMMENDATIONS = 'AI_RECOMMENDATIONS',
+  AI_DESCRIPTION_GENERATOR = 'AI_DESCRIPTION_GENERATOR',
+  AI_PHOTO_ANALYSIS = 'AI_PHOTO_ANALYSIS',
+  AI_FRAUD_DETECTION = 'AI_FRAUD_DETECTION',
+  AI_PRICE_ASSISTANT = 'AI_PRICE_ASSISTANT',
+  AI_SUPPORT_ASSISTANT = 'AI_SUPPORT_ASSISTANT',
+  AI_PROPERTY_COMPARISON = 'AI_PROPERTY_COMPARISON'
+}
+
+export enum AIRiskLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
+}
+
+export enum ViewingRequestStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  DECLINED = 'DECLINED',
+  CANCELLED = 'CANCELLED'
+}
+
+export interface MatchFactor {
+  factor: string;
+  matched: boolean;
+  score: number; // 0 - 100
+  explanation: string;
+}
+
+export interface PropertyMatchResult {
+  overallScore: number; // 0 - 100
+  summary: string;
+  factors: MatchFactor[];
+}
+
+export interface PriceEstimateResult {
+  isAvailable: boolean;
+  currency: string;
+  suggestedMinRent: number;
+  suggestedMaxRent: number;
+  medianMarketRent: number;
+  confidenceScore: number; // 0 - 100
+  sampleSize: number;
+  influencingFactors: string[];
+  disclaimer: string;
+}
+
+export interface PhotoQualityFeedback {
+  imageUrl: string;
+  isAcceptable: boolean;
+  qualityScore: number; // 0 - 100
+  detectedRoom?: string;
+  isTooDark: boolean;
+  isBlurry: boolean;
+  isScreenshot: boolean;
+  suggestions: string[];
+}
+
+export interface ListingQualityScore {
+  score: number; // 0 - 100
+  grade: 'EXCELLENT' | 'GOOD' | 'NEEDS_IMPROVEMENT' | 'POOR';
+  missingItems: string[];
+  suggestions: string[];
+  strengths: string[];
+}
+
+export interface DuplicateDetectionAlert {
+  isPotentialDuplicate: boolean;
+  similarityScore: number; // 0 - 100
+  matchedPropertyId?: string;
+  matchedPropertyTitle?: string;
+  matchedOwnerId?: string;
+  reasons: string[];
+}
+
+export interface RiskSignalReport {
+  overallRiskScore: number; // 0 - 100
+  riskLevel: AIRiskLevel;
+  requiresHumanReview: boolean;
+  signals: Array<{
+    type: string;
+    description: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  }>;
+}
+
+export interface PropertyComparisonResult {
+  properties: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    subCity: string;
+    neighborhood: string;
+    propertyType: string;
+    bedrooms: number;
+    bathrooms: number;
+    sizeSqm: number;
+    monthlyRent: number;
+    depositAmount: number;
+    furnished: boolean;
+    verificationStatus: string;
+    primaryImage: string | null;
+    amenities: string[];
+  }>;
+  summaryHighlights: {
+    lowestRentId: string;
+    largestSizeId: string;
+    mostAmenitiesId: string;
+  };
+  comparisonNarrative: string;
+}
+
+

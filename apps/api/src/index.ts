@@ -25,6 +25,7 @@ import { reviewsRoutes } from './modules/reviews/reviews.routes.js';
 import { reportsRoutes } from './modules/reports/reports.routes.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { uploadsRoutes } from './modules/uploads/uploads.routes.js';
+import { aiRoutes } from './modules/ai/ai.routes.js';
 
 const app = Fastify({
   logger: {
@@ -122,6 +123,7 @@ async function bootstrap() {
   await app.register(reportsRoutes, { prefix: '/api/v1/reports' });
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
   await app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });
+  await app.register(aiRoutes, { prefix: '/api/v1/ai' });
 
   // Centralized Error Handling
   app.setErrorHandler((error: any, request, reply) => {

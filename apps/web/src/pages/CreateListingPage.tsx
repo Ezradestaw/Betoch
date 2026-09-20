@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   AlertCircle,
   Eye,
-  Building
+  Building,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 
 export const CreateListingPage: React.FC = () => {
@@ -64,6 +66,106 @@ export const CreateListingPage: React.FC = () => {
   });
 
   const [newImageUrl, setNewImageUrl] = useState('');
+
+  // AI Assistant States
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [ownerNotes, setOwnerNotes] = useState('');
+  const [generatedHighlights, setGeneratedHighlights] = useState<string[]>([]);
+
+  const [isEstimatingPrice, setIsEstimatingPrice] = useState(false);
+  const [priceEstimate, setPriceEstimate] = useState<any>(null);
+
+  const [isAnalyzingPhotos, setIsAnalyzingPhotos] = useState(false);
+  const [photoFeedbacks, setPhotoFeedbacks] = useState<any[]>([]);
+
+  const [isAnalyzingQuality, setIsAnalyzingQuality] = useState(false);
+  const [qualityScore, setQualityScore] = useState<any>(null);
+
+  const handleGenerateDescription = async () => {
+    setIsGeneratingDesc(true);
+    try {
+      const res = await api.generateDescription({
+        propertyType: formData.propertyType,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        subCity: formData.subCity,
+        neighborhood: formData.neighborhood || 'Bole Atlas',
+        sizeSqm: formData.sizeSqm,
+        furnished: formData.furnished,
+        monthlyRent: formData.monthlyRent,
+        amenities: formData.amenityIds,
+        ownerNotes: ownerNotes.trim() || undefined
+      });
+      setFormData((prev) => ({
+        ...prev,
+        description: res.fullDescription,
+        title: prev.title || res.shortDescription
+      }));
+      setGeneratedHighlights(res.keyHighlights || []);
+    } catch (err: any) {
+      alert(err.message || 'Description generation failed.');
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
+
+  const handleEstimatePrice = async () => {
+    setIsEstimatingPrice(true);
+    try {
+      const res = await api.estimatePrice({
+        subCity: formData.subCity,
+        propertyType: formData.propertyType,
+        bedrooms: formData.bedrooms,
+        sizeSqm: formData.sizeSqm,
+        furnished: formData.furnished,
+        amenityIds: formData.amenityIds
+      });
+      setPriceEstimate(res);
+    } catch (err: any) {
+      alert(err.message || 'Failed to estimate market price.');
+    } finally {
+      setIsEstimatingPrice(false);
+    }
+  };
+
+  const handleAnalyzePhotos = async () => {
+    if (formData.imageUrls.length === 0) return;
+    setIsAnalyzingPhotos(true);
+    try {
+      const res = await api.analyzePhotos(formData.imageUrls);
+      setPhotoFeedbacks(res);
+    } catch (err: any) {
+      alert(err.message || 'Photo analysis failed.');
+    } finally {
+      setIsAnalyzingPhotos(false);
+    }
+  };
+
+  const handleAnalyzeQuality = async () => {
+    setIsAnalyzingQuality(true);
+    try {
+      const score = await api.analyzeQuality({
+        title: formData.title,
+        description: formData.description,
+        propertyType: formData.propertyType,
+        sizeSqm: formData.sizeSqm,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        monthlyRent: formData.monthlyRent,
+        depositAmount: formData.depositAmount,
+        imageUrls: formData.imageUrls,
+        amenityIds: formData.amenityIds,
+        subCity: formData.subCity,
+        neighborhood: formData.neighborhood,
+        availableFrom: formData.availableFrom
+      });
+      setQualityScore(score);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setIsAnalyzingQuality(false);
+    }
+  };
 
   const steps = [
     { num: 1, title: 'Basic Info' },
@@ -264,6 +366,49 @@ export const CreateListingPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* AI Description Generator Assistant */}
+              <div className="p-3.5 rounded-xl bg-brand-50/70 border border-brand-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" />
+                    <span className="text-xs font-bold text-brand-900">AI Description Assistant</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateDescription}
+                    disabled={isGeneratingDesc}
+                    className="px-3 py-1.5 bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{isGeneratingDesc ? 'Drafting...' : 'Generate Description'}</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  Generates an objective description based strictly on your room counts, sub-city, and amenities without fabricating unsupplied features.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Optional custom owner note (e.g. Recently repainted, quiet residential street)..."
+                  value={ownerNotes}
+                  onChange={(e) => setOwnerNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white"
+                />
+
+                {generatedHighlights.length > 0 && (
+                  <div className="pt-2 border-t border-brand-200/60">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-brand-800 block mb-1">Generated Highlights:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {generatedHighlights.map((h, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-white text-brand-900 rounded-md text-[10px] font-semibold border border-brand-200 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
                 <textarea
@@ -341,6 +486,50 @@ export const CreateListingPage: React.FC = () => {
           {currentStep === 3 && (
             <div className="space-y-4">
               <h2 className="text-base font-bold text-slate-900 border-b pb-3">Step 3: Rental Terms & Legal Safeguards</h2>
+
+              {/* AI Rental Price Assistant */}
+              <div className="p-3.5 rounded-xl bg-gold-50/70 border border-gold-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-gold-700" />
+                    <span className="text-xs font-bold text-slate-900">AI Rental Price Guidance</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleEstimatePrice}
+                    disabled={isEstimatingPrice}
+                    className="px-3 py-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Sparkles className="w-3 h-3 text-gold-400" />
+                    <span>{isEstimatingPrice ? 'Calculating...' : 'Check Market Rent'}</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  Evaluates published listings in {formData.subCity} for comparable {formData.bedrooms}-bedroom {formData.propertyType.toLowerCase()}s.
+                </p>
+
+                {priceEstimate && (
+                  <div className="mt-2 p-2.5 bg-white rounded-lg border border-gold-200/60 text-xs space-y-1">
+                    {priceEstimate.isAvailable ? (
+                      <>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-slate-600 font-medium">Suggested Market Range:</span>
+                          <span className="text-sm font-bold text-slate-900">
+                            {priceEstimate.suggestedMinRent.toLocaleString()} – {priceEstimate.suggestedMaxRent.toLocaleString()} ETB/mo
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          Median: {priceEstimate.medianMarketRent.toLocaleString()} ETB • Confidence: {priceEstimate.confidenceScore}% (Sample: {priceEstimate.sampleSize} listings)
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-amber-800 text-[11px] font-medium">
+                        {priceEstimate.disclaimer}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -492,6 +681,46 @@ export const CreateListingPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+
+              {/* AI Photo Quality Analyzer */}
+              <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" />
+                    <span className="text-xs font-bold text-slate-900">AI Photo Quality & Room Analysis</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAnalyzePhotos}
+                    disabled={isAnalyzingPhotos || formData.imageUrls.length === 0}
+                    className="px-3 py-1.5 bg-brand-700 hover:bg-brand-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{isAnalyzingPhotos ? 'Analyzing Photos...' : 'Analyze Photos'}</span>
+                  </button>
+                </div>
+
+                {photoFeedbacks.length > 0 && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                    {photoFeedbacks.map((fb, idx) => (
+                      <div key={idx} className="flex items-start gap-3 bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
+                        <img src={fb.imageUrl} alt="" className="w-14 h-10 object-cover rounded-md border shrink-0" />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 text-[11px]">{fb.detectedRoom || 'Room Photo'}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              Score: {fb.qualityScore}/100
+                            </span>
+                          </div>
+                          {fb.suggestions?.length > 0 && (
+                            <p className="text-[10px] text-slate-600 italic">💡 {fb.suggestions[0]}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -552,6 +781,54 @@ export const CreateListingPage: React.FC = () => {
                   <h3 className="text-sm font-bold text-slate-800">{formData.title || 'Untitled Listing'}</h3>
                   <p className="text-xs text-slate-500 mt-1">{formData.neighborhood}, {formData.subCity}</p>
                 </div>
+              </div>
+
+              {/* AI Listing Quality Score Widget */}
+              <div className="max-w-md mx-auto p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-600" />
+                    <span className="font-bold text-slate-900">AI Listing Quality Analyzer</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAnalyzeQuality}
+                    disabled={isAnalyzingQuality}
+                    className="px-3 py-1 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1"
+                  >
+                    <span>{isAnalyzingQuality ? 'Evaluating...' : 'Check Completeness Score'}</span>
+                  </button>
+                </div>
+
+                {qualityScore && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-700">Listing Completeness:</span>
+                      <span className={`font-black text-sm px-2 py-0.5 rounded-full ${
+                        qualityScore.score >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {qualityScore.score}/100 ({qualityScore.grade})
+                      </span>
+                    </div>
+
+                    {qualityScore.missingItems?.length > 0 && (
+                      <div className="p-2 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-800">
+                        <span className="font-bold block mb-0.5">Recommended additions:</span>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          {qualityScore.missingItems.map((m: string, i: number) => (
+                            <li key={i}>{m}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {qualityScore.suggestions?.length > 0 && (
+                      <p className="text-[11px] text-slate-600 italic">
+                        💡 Tip: {qualityScore.suggestions[0]}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
